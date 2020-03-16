@@ -1,0 +1,71 @@
+# Level00
+I had to find a SUID of the user flag00 so I used the command "find / -perm
+-4000 2>/dev/null" in order to find SUIDs and I found one at the path:
+	/bin/.../flag00
+So I executed it, changed to the user flag00 and ran getflag to finish the level.
+
+# Level01
+In the source code the program sets the UID and GUID to those of flag01
+and runs the following line:
+	system("/usr/bin/env echo and now what?");
+The vulnerability here is that the program doesn't use the full path of echo, 
+which means it searches for the binary according to the $PATH variable, hence
+making it possible for me to execute whatever I want. In that case I added the
+directory /home/level01 at the beginning, added a shell script named "echo" that
+spawns a shell and executed the program. This granted me a shell as flag01.
+
+# Level02
+The program takes the environment variable of $USER, formats it into the string
+"/bin/echo %s is so cool" and executes it using system(). In order to spawn a 
+shell, I set $USER to \`/bin/bash\`. The ` around /bin/bash mean that it needs
+to be evaluated, which causes the program to execute /bin/bash, thus spawning
+a shell as flag02.
+
+# Level03
+In the level, there is a cron that iterates over a directory and executes every
+file in it. I created a shell script that contained the following command:
+	getflag > /home/flag03/output
+and after a couple of minutes, the output file was created and contained the 
+correct output.
+
+# Level04
+The program in this level receives a path to a file and prints its contents.
+However, if the path contains the string "token" it doesn't print it. 
+The solution is to create a symlink to the token file, F.E by this command:
+	ln -s /home/level04/link /home/flag04/token
+and by executing the flag04 program with the path of the symlink.
+This produces the following token:
+	06508b5e-8909-4f38-b630-fdb148a848a2
+
+# Level05
+In this level I looked at the home directory and at first glance it looked
+empty. I used ls -la and saw that I couldn't cd into any folder but the .backup 
+so I looked in it and there was a tgz file. I unzipped it using 
+tar xvzf <filename> -C <output> and inside the output dir there was a .ssh
+folder that contained a private key for flag05. I wrote it to a file and used
+ssh -i priv_key flag05@<ip> and I was logged into flag05. I used getflag and it
+executed successfully.
+
+# Level06
+In this level the hint was that the user uses a legacy unix system for his 
+account credentials. I looked in the /etc/passwd and saw that it contained some
+sort of a hash as his password. I copied the line for his user and pasted it in
+JohnTheRipper and it cracked it as "hello". I used su to log into flag06 with
+"hello" as the password and I was logged in. I ran getflag and it ran successfully.
+
+# Level07
+In this level we have a cgi file. The file is served by the thttpd dameon with 
+the config file of thttpd.conf, which says it listens on port 7007.
+The file receives a Host parameter and formats it into the string:
+"ping -c 3 {}". This could be exploited for code injection by ending the line
+ with a "|" sign and injecting our own code. I browsed to the following link:
+	192.168.80.130:7007/index.cgi?Host=127.0.0.1 | getflag
+Which executed successfully.
+
+# Level08
+In this level we have a pcap file. I downloaded it, opened it in Wireshark and
+looked at the TCP stream. We see an authentication process, where the password
+is backd00Rmate. I used it for flag08 and was logged in successfully. I ran
+getflag and moved on.
+
+# Level09
