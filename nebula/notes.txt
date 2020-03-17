@@ -108,3 +108,64 @@ After a few tries I received the following token:
 	615a2ce1-b2b5-4c76-8eed-8aa5c4015c27
 
 # Level11
+This level has a program that receives input from the user. If the length of the
+input is less than 1024, it will generate a (psuedo) random string and will
+execute it. If it is longer than 1024, the program will generate a random string,
+try to open it as a file and write the input of the user to it. Upon playing with
+the first option I noticed that if I put a Content-Length of 1 and write ` as the content,
+Every couple of tries it tries to execute the character "a". In order to use it I
+added the /tmp directory to the path variable and created a symlink named "a" to
+the getflag binary. After a couple of runs it executed getflag successfully.
+
+# Level12
+In this level we have a Lua script that listens on 127.0.0.1:50001. It prompts the
+client for a password and then it echoes it into sha1sum and compares it to another
+value. If they are equal it would print a token and if they aren't it wouldn't.
+The vulnerability here is that the user input is just executed without sanitaion
+so I was able to just execute commands by finishing the echo command with a ";", 
+put my commands and finish it with a comment (so the sha1sum part wouldn't execute).
+I put the following password:
+	abc; getflag > /tmp/flag12 #
+and when I opened flag12 I saw that getflag was executed successfully.
+
+# Level13
+In this level we have a program that checks the user's UID. If it is equal to 1000,
+the program prints the token and if it isn't, the program exits. After a bit of
+research it seemed like I can't fool the getuid() function directly so the method
+I used is by changing LD_PRELOAD, which is an environment variable program use when
+looking for .so files. I compiled my own .so file with the following content:
+
+	#include <unistd.h>
+	#include <sys/types.h>
+
+	uid_t getuid(){
+	    return 1000;
+	}
+
+I compiled it with the following line:
+	gcc -shared -fPIC uid.c -o uid.so
+and I attempted to run flag13 with LD_PRELOAD set to uid.so but it failed. After
+research I found out that the LD_PRELOAD trick doesn't work with SUID files so I
+made a copy of flag13 and executed it with my .so file and it worked and I got the following token:
+	b705702b-76a8-42b0-8844-3adabbe5ac58
+
+# Level14
+In this level we have a program that encrypts user input and we have a token that
+we need to decrypt. In order to understand the "encryption" algorithm I inserted a
+single "a" in multiple lines and it seemed to increase based on the line number.
+After that I inserted multiple "a"'s in a single line and it turned into the ABC,
+which meant that the encryption is just adding the index of the character to its
+ASCII value. In order to decrypt it I just subtracted the index of the character from
+its value using the following snippet:
+
+	token = '857:g67?5ABBo:BtDA?tIvLDKL{MQPSRQWW.'
+	for i, char in enumerate(token):
+	    print chr(ord(char) - i)
+
+which resulted in the following token:
+	8457c118-887c-4e40-a5a6-33a25353165
+After that I logged into flag14 to make sure it was the correct token and indeed,
+it was.
+
+#Level15
+
