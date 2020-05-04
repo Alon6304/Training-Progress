@@ -115,7 +115,7 @@ try to open it as a file and write the input of the user to it. Upon playing wit
 the first option I noticed that if I put a Content-Length of 1 and write ` as the content,
 Every couple of tries it tries to execute the character "a". In order to use it I
 added the /tmp directory to the path variable and created a symlink named "a" to
-the getflag binary. After a couple of runs it executed getflag successfully.
+the getflag binary. After a couple of runs it executed
 
 # Level12
 In this level we have a Lua script that listens on 127.0.0.1:50001. It prompts the
