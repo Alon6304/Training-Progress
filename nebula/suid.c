@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
 

