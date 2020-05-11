@@ -241,7 +241,7 @@ The username I entered looked like this:
 	username=`/???/123`
 After that I URL-encoded all of it and the final query was this:
 	http://127.0.0.1:1616/index.cgi?username=%60%2F%3F%3F%3F%2F123%60
-I user wget and after the request I looked at /home/flag16/level16_result and
+I used wget and after the request I looked at /home/flag16/level16_result and
 it said that I executed getflag successfully.
 
 # Level17
@@ -266,8 +266,19 @@ when I checked for the file /tmp/level17_test I saw that getflag ran successfull
 
 In this level we have a program that has a bunch of features but the two that I focused
 on are the "shell" and "login" functions. The shell function is pretty self-explanatory:
-it calls execve with "/bin/sh" and passes the 
-./flag18 --rcfile abc -d /dev/tty `python -c "for i in xrange(1020): print '-d /tmp/fd_{}'.format(i),"`
+it calls execve with "/bin/sh" and passes the command line parameters to it, which would
+causes some problems if and when we execute it.
+The login function tries to get a file descriptor to a password file. If it succeeds,
+it opens the file and compares its contents to whatever's provided to the function. If
+it matches, the user is logged in and if it doesn't, he isn't. However, all of this
+logic happens only if the program gets a file descriptor, which would fail if the
+program already holds the maximum amount of file descriptors that could be held by
+a single process. To find this limit I ran 'ulimit -n' which returned that the limit
+is 1024 so I made it open 1024 fd's to debug files but it needed a couple handle for
+so's and other stuff so I ended up opening 1020 debug files, calling the login function,
+closing all of the debug files and running shell().
+The line I used was this:
+	./flag18 --rcfile abc -d /dev/tty `python -c "for i in xrange(1020): print '-d /tmp/fd_{}'.format(i),"`
 
 # Level19!
 This program checks if the parent process of itself is owned by root. In order to 

